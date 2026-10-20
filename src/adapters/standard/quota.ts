@@ -2,8 +2,8 @@ import type { SessionRetry } from "@opencode/plugin/promise/session";
 import type { QuotaVerdict } from "../../core/types.js";
 
 export interface QuotaPolicy {
-  /** Exceptional reviewed codes can survive imperfect native normalization. */
-  explicitUnclassified?: boolean;
+  /** Only reviewed exact codes may override broad native normalization. */
+  exactExhaustion(body: Record<string, unknown> | undefined): boolean;
   exhaustion(
     error: SessionRetry["error"],
     body: Record<string, unknown> | undefined,
@@ -26,19 +26,31 @@ export function classify(
   policy: QuotaPolicy,
   now = Date.now(),
 ): QuotaVerdict {
-  let body: Record<string, unknown> | undefined;
+  const bodies: Array<Record<string, unknown> | undefined> = [];
   try {
     const root = object(JSON.parse(error.response?.body ?? "null"));
-    body = object(root?.error) ?? root;
+    for (const body of [
+      root,
+      object(root?.error),
+      object(object(root?.response)?.error),
+    ])
+      if (body) bodies.push(body);
   } catch {
     /* Arbitrary response text is not exhaustion evidence. */
   }
-  if (policy.nonExhaustion(error, body)) return { kind: "not-exhausted" };
-  if (error.type === "provider.rate-limit") return { kind: "not-exhausted" };
-  if (error.type !== "provider.quota" && !policy.explicitUnclassified)
-    return { kind: "unknown" };
-  // Native provider.quota is evidence, not permission: a reviewed rule must confirm.
-  if (!policy.exhaustion(error, body)) return { kind: "unknown" };
+  if (!bodies.length) bodies.push(undefined);
+  // Contradictory outer evidence must not be hidden by a nested quota code.
+  if (bodies.some((body) => policy.nonExhaustion(error, body)))
+    return { kind: "not-exhausted" };
+  let body = bodies.find((body) => policy.exactExhaustion(body));
+  if (!body) {
+    if (error.type === "provider.rate-limit") return { kind: "not-exhausted" };
+    if (error.type !== "provider.quota") return { kind: "unknown" };
+    // Generic native quota plus a reviewed message is narrower than an exact code.
+    const index = bodies.findIndex((body) => policy.exhaustion(error, body));
+    if (index < 0) return { kind: "unknown" };
+    body = bodies[index];
+  }
   const reset = policy.reset(body);
   let until: number | undefined;
   if (typeof reset === "number" && Number.isFinite(reset))
