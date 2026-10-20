@@ -1,49 +1,44 @@
-# Recovery architecture
+# Architecture
+
+OpenAI is the only enabled provider.
 
 ```text
-OpenCode native APIs / public session hooks
-  → provider-neutral engine (core/)
-  → custom-first adapter registry
-      → OpenAI specialization using shared standard primitives
-      → centralized standard adapter + reviewed profiles
-      → unsupported
+OpenCode hooks
+  → shared recovery engine
+  → custom adapter, standard profile, or unsupported
 ```
 
-OpenAI is the only enabled provider. The standard registry is deliberately empty; OpenAI composes its own reviewed profile with `StandardAdapter`. Shared hashing, destination validation, direct-token inspection, quota interpretation, and configuration fingerprints are exercised by OpenAI, not a disconnected future framework.
+## Layout
 
-## Responsibilities
+- `src/index.ts`: plugin entrypoint.
+- `src/runtime.ts`: hooks, integration services, and cleanup.
+- `src/core/`: account inventory, model snapshots, activation queues, dispatch attribution, cooldowns, and recovery.
+- `src/adapters/standard/`: shared authentication inspection, quota policy, and declarative provider profiles.
+- `src/adapters/openai/`: OpenAI methods, endpoints, account headers, readiness, and compaction handling.
+- `src/adapters/registry.ts`: custom-first adapter selection. A custom adapter's refusal never falls through to generic handling.
 
-- `src/index.ts`: public plugin definition; `runtime.ts`: hooks, integration services, lifecycle/disposal.
-- `core/types.ts`, `model.ts`: native binding and effective public catalog snapshots. Models already include provider defaults; variants merge settings/body recursively and headers case-insensitively. Provider-only transport settings stay separate. These helpers do not reproduce runtime initialization.
-- `core/accounts.ts`: one stable saved-account inventory/order per integration; coalesced, short-lived native credential resolution.
-- `core/coordinator.ts`, `rotation.ts`: bounded integration queue, cooldowns, chains, native activation, readiness, and continuation authorization.
-- `core/dispatch.ts`: preparation generations, transport evidence, attempt completion, collision refusal, and dispatch guards.
-- `adapters/contract.ts`, `registry.ts`: capabilities and custom-first resolution. A custom refusal is terminal; it must never fall through to standard behavior.
-- `adapters/standard/`: one implementation, declarative profiles, authentication inspection and quota policy. No primary authentication injection.
-- `adapters/openai/`: reviewed methods, endpoints, account headers, quota exceptions, readiness, and prepared-compaction capability.
+OpenAI reuses the standard adapter's shared primitives. The standard profile registry remains empty; other providers are not enabled automatically.
 
-## Identity
+## Account and request identity
 
-`provider.integrationID ?? provider.id` alone determines the native account-selection domain. Provider ID identifies the configured model namespace. Effective model package (including model overrides), canonical identity, variant, and credential representation determine implementation compatibility; they are not alternative account-selection authorities.
+Use `provider.integrationID ?? provider.id` for native account selection. Providers sharing an integration share one account inventory and activation queue, regardless of sign-in method.
 
-Cooldowns are integration/credential scoped. Providers sharing an integration share its inventory and activation queue. Chains additionally bind session, provider/model/variant, implementation identity, and a local chain ID. Dispatch generations reject stale asynchronous updates; they are not native selection revisions.
+Use the effective model package, canonical identity, variant, and credential representation to decide compatibility. Model snapshots preserve recursive settings/body merges, case-insensitive headers, and provider-only transport settings. They do not initialize runtime models.
 
-One conservative slot per session deliberately rejects overlapping primary/compaction preparations, including cross-provider overlaps. WebSocket and HTTP fallback from one preparation share a logical dispatch. Ordinary failed attempts finish bookkeeping without consuming quota-recovery authority. Only confirmed, attributed exhaustion consumes that authority.
+Recovery chains retain session, provider/model/variant, and integration identity. Local generations reject stale asynchronous updates. Cooldowns apply only to the exhausted integration/credential, not an inferred organization-wide quota.
 
-Authentication fingerprints are namespaced by integration/provider/package/profile/route. Observed association collisions invalidate authority rather than overwrite it. Only hashes and minimal non-secret metadata are retained; resolved credential values remain transient native-resolution inputs.
+Dispatch attribution rejects overlapping preparations and conflicting credential associations. WebSocket and HTTP fallback share one logical dispatch. Ordinary retries finish attempt bookkeeping without consuming quota-recovery authority.
 
-## Adding a standard provider
+## Adding providers
 
-Review source and public hooks before adding an entry to `standard/profiles.ts`. Specify exact reviewed package entrypoints, configured/canonical identities, supported direct credential representations, authentication/identity headers, trusted destination boundaries, configuration readiness, and explicit exhaustion/non-exhaustion/reset policies. Native `provider.quota` is primary evidence, not unconditional rotation permission.
+Prefer a reviewed declarative profile over a new adapter. Profiles specify supported packages and identities, direct credential representations, authentication headers, trusted destinations, readiness checks, and exhaustion/reset rules.
 
-Review native and `aisdk:` implementations separately. Shared credential injection or an OpenAI-compatible protocol does not prove equivalent transport hooks, quota semantics, or continuation safety. Signing, token exchange, unknown transformations, external references, discovery-bound settings, and arbitrary destinations are not standard direct authentication.
+Use a custom adapter only for genuinely different behavior. Review native and SDK transports separately; matching protocols or tokens do not establish safe recovery. External credentials, signing, token exchange, unknown transformations, and arbitrary destinations are not standard cases.
 
-Prefer a profile assignment over a new adapter. Introduce a custom adapter only for genuinely different control flow. Activation eligibility and automatic-continuation capability are separate: OpenAI can activate unfamiliar saved methods without guessing their transport behavior.
+Keep activation eligibility separate from automatic continuation. Standard adapters do not replace prepared-compaction authentication. OpenAI's narrow exception must not become a generic fallback.
 
-Standard prepared-compaction replacement is disabled. Any new prepared-continuation capability needs equivalent evidence to OpenAI's narrowly guarded implementation. See [recovery boundaries](recovery.md).
+## State and safety
 
-## State limits
+Keep credentials short-lived, retain only hashes and necessary metadata, and use fixed sanitized diagnostics. Bound inventories, queues, dispatches, associations, chains, and cooldowns. Capacity limits must refuse recovery rather than split coordination. Attribution and chains expire after thirty minutes; disposal clears local state and aborts recovery work.
 
-Per instance: at most 32 integration services, 512 session slots, and 256 authentication associations. Per integration: at most 64 pending recoveries, 64 concurrent credential resolutions, 1,024 inventory entries, 512 chains, and 1,024 cooldowns/candidates per chain. Excess inventory/queue capacity fails conservatively rather than splitting account order or activation queues. Dispatch/association/chain authority expires after thirty minutes; cooldowns expire at their reset. Disposal aborts local operations and clears retained state. Native resolution already underway may finish later.
-
-Architecture/source review used OpenCode checkout `4617210822bdbb31e5749751afbfb4584ccedac8`, with relevant public contracts checked against `v2.0.32`. Newer accepted V2 releases still require compatibility review.
+OpenCode owns refresh, model initialization, replay, history, tools, and retry budgets. See [recovery limits](recovery.md) before changing this behavior.

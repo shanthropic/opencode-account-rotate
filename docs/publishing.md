@@ -23,5 +23,3 @@ Never move a published tag or republish an existing npm version. Tags without th
 Authentication failures require checking the exact trusted-publisher fields, hosted runner, workflow permissions, and npm policy. `npm whoami` does not validate OIDC, and a package dry run does not validate registry authorization.
 
 Publication does not change installation or restart OpenCode. Install/update the plugin only as a separately authorized integration action. Installation is not [live recovery acceptance](recovery.md#validation).
-
-References: [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/), [OpenCode V2 plugin loading](https://opencode.ai/v2/docs/plugins).

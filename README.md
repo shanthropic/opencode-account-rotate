@@ -1,6 +1,6 @@
 # OpenCode Account Rotate
 
-Rotates existing saved **OpenAI** accounts on confirmed quota exhaustion through OpenCode V2's native activation API. Requires **OpenCode 2.0.32+**. [MIT licensed](LICENSE).
+Automatically switches between saved **OpenAI** accounts when quota is exhausted. Requires **OpenCode 2.0.32+**. [MIT licensed](LICENSE).
 
 - Uses your existing OpenCode sign-ins—no separate login, credential copies, or API key required.
 - Keeps your selected provider, model, and variant unchanged.
@@ -65,4 +65,4 @@ No tests or test files are included. See [architecture and provider-extension gu
 
 Static/package checks do not validate live recovery. Real-account Desktop acceptance across sign-in methods, concurrent/manual switches, throttling, tools, compaction, opaque state, WebSocket fallback, cancellation, and exhaustion **remains unvalidated**.
 
-Maintainers: [publishing](docs/publishing.md). API reference: [OpenCode V2 plugins](https://opencode.ai/v2/docs/build/plugins).
+Maintainers: [publishing](docs/publishing.md).
