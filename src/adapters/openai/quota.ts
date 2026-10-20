@@ -8,8 +8,9 @@ const codes = new Set([
   "subscription_sharing_usage_limit_exceeded",
 ]);
 export const quotaPolicy: QuotaPolicy = {
-  explicitUnclassified: true,
   nonExhaustion: (error, body) =>
+    error.type === "provider.auth" ||
+    [401, 402, 403].includes(error.status ?? 0) ||
     [body?.code, body?.type].some(
       (code) =>
         typeof code === "string" &&
@@ -23,17 +24,28 @@ export const quotaPolicy: QuotaPolicy = {
           "billing_not_active",
           "model_not_found",
           "permission_denied",
+          "authentication_error",
+          "invalid_api_key",
         ].includes(code),
     ) ||
-    /\b(?:package has expired|plan does not yet include|payment required|model (?:is )?not (?:available|supported))\b/i.test(
-      error.message,
+    [error.message, body?.message].some(
+      (message) =>
+        typeof message === "string" &&
+        /\b(?:package has expired|plan does not yet include|payment required|model (?:is )?not (?:available|supported))\b/i.test(
+          message,
+        ),
     ),
-  exhaustion: (error, body) =>
+  exactExhaustion: (body) =>
     [body?.code, body?.type].some(
       (code) => typeof code === "string" && codes.has(code),
-    ) ||
-    /\b(?:you(?:'ve| have) (?:hit|reached) your usage limit|you exceeded your current quota)\b/i.test(
-      error.message,
+    ),
+  exhaustion: (error, body) =>
+    [error.message, body?.message].some(
+      (message) =>
+        typeof message === "string" &&
+        /\b(?:you(?:'ve| have) (?:hit|reached) your usage limit|you exceeded your current quota)\b/i.test(
+          message,
+        ),
     ),
   reset: (body) => body?.resets_at ?? body?.reset_at,
 };

@@ -31,9 +31,21 @@ export interface Dispatch {
   authorization?: { credentialID: string; prepared: boolean };
 }
 
+interface Permission {
+  agent: string;
+  model: Model.Ref;
+  binding: Binding;
+  adapterID: string;
+  credentialID: string;
+  chainID: number;
+  created: number;
+  invalid: boolean;
+}
+
 /** Tokens/bodies never retained. WS and HTTP fallback share one preparation. */
 export class Dispatches {
   private slots = new Map<string, Dispatch>();
+  private permissions = new Map<string, Permission>();
   private identities = new Map<string, { id?: string; until: number }>();
   private generation = 0;
   constructor(
@@ -44,13 +56,17 @@ export class Dispatches {
   async begin(event: SessionModelRequest): Promise<void> {
     if (event.kind !== "primary" && event.kind !== "compaction") return;
     this.prune();
-    const previous = this.slots.get(event.sessionID);
-    const follows =
-      previous?.finished &&
-      previous.kind === event.kind &&
-      sameModel(previous.model, event.model) &&
-      previous.agent === event.agent;
-    if (previous && !previous.finished) previous.ambiguous = true;
+    const permission = this.permissions.get(event.sessionID);
+    if (permission?.invalid) this.stop();
+    // Native primary/compaction work is serialized. An unfinished slot is not
+    // evidence of overlap: successful sends never enter the retry hook.
+    if (!this.slots.has(event.sessionID) && this.slots.size >= 512) {
+      const disposable = [...this.slots].find(
+        ([id, slot]) => !slot.authorization && !this.permissions.has(id),
+      );
+      if (!disposable) this.stop();
+      this.slots.delete(disposable[0]);
+    }
     const slot: Dispatch = {
       sessionID: event.sessionID,
       agent: event.agent,
@@ -58,15 +74,16 @@ export class Dispatches {
       kind: event.kind,
       created: Date.now(),
       generation: ++this.generation,
-      chainID: follows ? previous.chainID : this.generation,
-      ambiguous: !!previous && !previous.finished,
+      chainID: permission?.chainID ?? this.generation,
+      ambiguous: false,
       finished: false,
       consumed: false,
-      authorization: follows ? previous.authorization : undefined,
+      authorization: permission
+        ? { credentialID: permission.credentialID, prepared: false }
+        : undefined,
     };
     this.slots.set(event.sessionID, slot);
     this.prune();
-    if (previous?.authorization && !follows) this.stop();
     const state = await snapshot(this.ctx, slot.model);
     if (!this.ensureCurrent(slot)) return;
     if (state) {
@@ -77,10 +94,14 @@ export class Dispatches {
       slot.authorization &&
       (!state ||
         !slot.adapter ||
-        !previous?.binding ||
-        !sameBinding(previous.binding, state.binding))
+        permission?.agent !== slot.agent ||
+        permission.adapterID !== slot.adapter.id ||
+        !sameBinding(permission.binding, state.binding) ||
+        (slot.kind === "primary" && !sameModel(permission.model, slot.model)))
     )
       this.stop();
+    if (permission && slot.kind === "primary")
+      this.permissions.delete(event.sessionID);
   }
 
   current(slot: Dispatch): boolean {
@@ -168,6 +189,11 @@ export class Dispatches {
     }
     if (evidence.matches && active) {
       const known = this.identities.get(evidence.fingerprint);
+      if (!known && this.identities.size >= 256) {
+        slot.ambiguous = true;
+        if (slot.authorization) this.stop();
+        return;
+      }
       // A collision is sticky until expiry; never overwrite association authority.
       this.identities.set(evidence.fingerprint, {
         id:
@@ -189,13 +215,30 @@ export class Dispatches {
     }
     if (
       !slot.finished &&
-      slot.fingerprint &&
-      slot.fingerprint !== evidence.fingerprint
+      ((slot.fingerprint && slot.fingerprint !== evidence.fingerprint) ||
+        (slot.route && slot.route !== evidence.route))
     )
       slot.ambiguous = true;
+    if (slot.ambiguous && slot.authorization) this.stop();
     const signature =
       slot.signature ?? (await adapter.signature(state).catch(() => ""));
     if (!this.ensureCurrent(slot)) return;
+    if (
+      slot.authorization &&
+      ((await accounts.activeID()) !== slot.authorization.credentialID ||
+        !this.current(slot))
+    )
+      this.stop();
+    // Signature/selection reads can yield while another session discovers a
+    // collision. Never dispatch using association authority captured before it.
+    const finalIdentity = this.identities.get(evidence.fingerprint);
+    if (
+      !finalIdentity?.id ||
+      finalIdentity.id !== known.id ||
+      finalIdentity.until <= Date.now()
+    )
+      slot.ambiguous = true;
+    if (slot.authorization && slot.ambiguous) this.stop();
     slot.finished = false;
     slot.consumed = false;
     slot.credentialID = known.id;
@@ -241,17 +284,92 @@ export class Dispatches {
     return slot;
   }
 
-  authorize(slot: Dispatch, credentialID: string): boolean {
-    if (!this.current(slot) || slot.ambiguous) return false;
-    slot.authorization = { credentialID, prepared: slot.kind === "compaction" };
+  /** Reserve before activation; a failed transition must not drop its guard. */
+  reserve(slot: Dispatch): boolean {
+    this.prune();
+    if (!this.current(slot) || slot.ambiguous || !slot.binding || !slot.adapter)
+      return false;
+    const pending = this.permissions.get(slot.sessionID);
+    if (pending) pending.invalid = true;
+    else if (slot.kind === "primary") {
+      if (this.permissions.size >= 512) return false;
+      this.permissions.set(slot.sessionID, {
+        agent: slot.agent,
+        model: { ...slot.model },
+        binding: slot.binding,
+        adapterID: slot.adapter.id,
+        credentialID: slot.credentialID!,
+        chainID: slot.chainID,
+        created: Date.now(),
+        invalid: true,
+      });
+    }
     return true;
+  }
+
+  async authorize(slot: Dispatch, credentialID: string): Promise<boolean> {
+    if (!this.current(slot) || slot.ambiguous || !slot.binding || !slot.adapter)
+      return false;
+    const pending = this.permissions.get(slot.sessionID);
+    if (pending) {
+      // Compaction may transfer a pending primary expectation only after
+      // verifying that primary's own binding/readiness on the selected account.
+      if (
+        pending.agent !== slot.agent ||
+        !sameBinding(pending.binding, slot.binding) ||
+        pending.adapterID !== slot.adapter.id ||
+        pending.chainID !== slot.chainID ||
+        pending.credentialID !== slot.credentialID
+      )
+        return false;
+      const state = await snapshot(this.ctx, pending.model);
+      const accounts = this.accounts(pending.binding.integrationID);
+      const active = await accounts.active();
+      if (
+        !state ||
+        !sameBinding(pending.binding, state.binding) ||
+        resolveAdapter(state)?.id !== pending.adapterID ||
+        !active ||
+        active.connection.id !== credentialID ||
+        !slot.adapter.ready(active, state) ||
+        (await accounts.activeID()) !== credentialID ||
+        !this.current(slot) ||
+        this.permissions.get(slot.sessionID) !== pending
+      )
+        return false;
+      pending.credentialID = credentialID;
+      pending.invalid = false;
+    } else if (slot.kind === "primary") return false;
+    if (slot.kind === "compaction")
+      slot.authorization = { credentialID, prepared: true };
+    return true;
+  }
+
+  /** Native ordinary retries get fresh primary preparations, not inherited guards. */
+  async rearm(slot: Dispatch): Promise<boolean> {
+    const expected = slot.authorization;
+    if (!expected || slot.kind !== "primary") return true;
+    const identity = slot.fingerprint && this.identities.get(slot.fingerprint);
+    if (
+      slot.credentialID !== expected.credentialID ||
+      !identity ||
+      identity.id !== expected.credentialID ||
+      identity.until <= Date.now() ||
+      !this.reserve(slot)
+    )
+      return false;
+    return this.authorize(slot, expected.credentialID);
   }
   clear(sessionID: string, created = Infinity): void {
     const slot = this.slots.get(sessionID);
     if (slot && created >= slot.created) this.slots.delete(sessionID);
+    const pending = this.permissions.get(sessionID);
+    if (pending && created >= pending.created)
+      this.permissions.delete(sessionID);
   }
   dispose(): void {
     this.slots.clear();
+    this.permissions.clear();
     this.identities.clear();
   }
   private stop(): never {
@@ -270,9 +388,7 @@ export class Dispatches {
       if (now - slot.created > 30 * 60_000) this.slots.delete(key);
     for (const [key, identity] of this.identities)
       if (identity.until <= now) this.identities.delete(key);
-    while (this.slots.size > 512)
-      this.slots.delete(this.slots.keys().next().value!);
-    while (this.identities.size > 256)
-      this.identities.delete(this.identities.keys().next().value!);
+    for (const [key, permission] of this.permissions)
+      if (now - permission.created > 30 * 60_000) this.permissions.delete(key);
   }
 }
