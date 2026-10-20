@@ -1,52 +1,51 @@
-# Recovery limits
+# Recovery and troubleshooting
 
-## When accounts switch
+## When does rotation happen?
 
 Recovery requires explicit quota exhaustion and an unambiguous match to the sending saved credential. A generic quota category, HTTP 429, payment failure, expired plan, or model restriction is not enough. Ordinary rate limits stay under OpenCode's retry policy.
 
-Reviewed exact exhaustion codes are recognized at the response root, `error`, or `response.error`, even when native normalization calls the failure a rate limit. Authentication, billing, eligibility, and capability exclusions across those envelopes take precedence. Message-only matching requires native quota classification and cannot override a rate limit. Authentication failures never trigger account rotation or custom refresh.
+Authentication, billing, eligibility, and model restrictions do not trigger rotation. OpenCode remains responsible for sign-in and credential refresh.
 
 The exhausted credential cools down until a recognized reset, or for five minutes. Recovery uses one native saved-account order across sign-in methods and never revisits excluded candidates within the same chain. Unavailable candidates are not marked quota-exhausted.
 
-OpenCode resolves and refreshes credentials. Each candidate gets up to ten seconds to become ready for the selected provider/model/variant. The inventory refreshes once before recovery declares no usable accounts remain. An unfamiliar OpenAI sign-in method may be activated, but automatic continuation requires recognized authentication.
+OpenCode resolves credentials and activates candidates from the saved-account list. The plugin checks readiness for the selected provider/model/variant and makes another pass for newly available accounts before giving up. An unfamiliar OpenAI sign-in method may be activated, but automatic continuation requires recognized authentication.
 
-## Retrying safely
+## Why did execution stop after switching?
 
-Primary requests are rebuilt by OpenCode. The plugin checks native selection and model readiness before allowing retry, then checks the actual destination and authentication at dispatch. It does not replace primary authentication or submit a new prompt.
+Switching accounts does not guarantee that the current request can continue. The plugin stops recovery when account selection, authentication, destination, or model compatibility cannot be verified. OpenCode's retry allowance still applies, and some failures never reach the plugin's retry hooks.
 
-Recovery creates one pending primary permission, consumed by the next matching primary preparation. Its dispatch guard survives HTTP/WebSocket fallback. An eligible ordinary retry explicitly re-arms permission without changing native delay; success does not pass permission to the next tool-driven step. Native authentication recovery remains outside this permission re-arming path.
+Primary requests are rebuilt by OpenCode. The plugin does not submit another prompt, rewrite history, or replay tools itself.
 
-Fresh primary/compaction preparation supersedes preceding bookkeeping in the audited serialized execution flow. An unfinished slot alone does not imply overlap. Title and transient generation traffic is excluded. Conflicting transport evidence, credential collisions, stale state, and unknown destinations cannot authorize recovery. Retry hooks lack request IDs, request kinds, and cancellation signals, so unsupported overlap cannot be reliably correlated.
+If asked to **submit again**, the newly selected account remains active. Check native sign-in status, model availability, and the last tool results before resubmitting.
 
-Register this plugin after authentication/transport-mutating plugins. Later changes can invalidate attribution. Dispatch guard failures stop the operation; they are not a clean cancellation API.
+### Conversation compaction
 
-The implementation follows OpenCode **v2.0.32**: retry hooks may override an incoming no-retry decision after verified native recovery. The hard retry allowance is checked before hooks; the plugin cannot extend it. Native retry/continuation handles failures before and after output begins, including ordinary OpenAI quota error frames. The exceptional `LLMEvent.provider-error` path does not invoke retry hooks. Missing hooks cannot be diagnosed from lifecycle events alone.
+Compaction summarizes a conversation to make room for further work. It may reuse a request prepared before the account switch. OpenAI continuation is allowed only when the route and account-neutral settings remain compatible and authentication can be safely replaced. Otherwise you must submit again.
 
-Activation completion is not a provider-reload barrier. Readiness polling precedes approval, and dispatch still verifies authentication. Runtime initialization, credential refresh, history, tools, sockets, continuation instructions, and replay safety remain OpenCode's responsibility.
+Intervening compaction must preserve the pending primary request's account expectations. A different compaction agent, model, or variant is conservatively refused while primary retry permission is pending.
 
-## Compaction
+No transcript, tool result, encrypted reasoning, or checkpoint is rewritten. Cross-account encrypted-state portability is not guaranteed; provider rejection is not bypassed by stripping context.
 
-Compaction may reuse an already prepared request after an account switch. Standard adapters do not replace its stale authentication.
+## What if no usable accounts remain?
 
-OpenAI allows header-only replacement when the trusted route and account-neutral settings remain unchanged, readiness is confirmed, and the stale authentication is recognized. Otherwise the account stays switched and you must **submit again**.
+Automatic quota recovery stops rather than cycling indefinitely. Accounts that fail readiness checks are skipped without being marked quota-exhausted. The last activated account remains selected; there is no rollback. Wait for quota to reset or select a usable account, then submit again.
 
-Automatic compaction can intervene before a primary retry. It does not consume the pending primary permission, even when a compaction hook supplies a result without transport. If compaction recovery changes the account again, that primary expectation transfers only after explicit binding, adapter, selection, and readiness verification. Currently this requires the same agent and full model/variant binding; a different compaction model is conservatively refused while primary permission is pending. Failed verification retains refusal rather than continuing unguarded.
-
-A successful rotated compaction's prepared guard does not leak into or reject the next fresh primary preparation. Step/compaction settlement does not clear session recovery state: native partial-output continuation may publish step failure after retry approval.
-
-No body, transcript, tool, encrypted reasoning, or checkpoint is rewritten. Cross-account opaque-state portability is not guaranteed; provider rejection is not bypassed by stripping context.
-
-## Shared selection and cancellation
+## How do other sessions and manual switches behave?
 
 **Activation is global and persistent.** It affects other sessions and locations. Local activation queues cannot make switching atomic against manual changes or other processes. Selection checks reduce races but cannot detect every external switch.
 
-Execution-terminal events and session deletion clear session state and abort queued or waiting recovery. Timestamp checks reject some delayed events, but public timestamps are not exact execution/request-generation IDs. Retry scheduling is not completion.
+Cancellation is best-effort. Account activation or credential resolution already underway may finish after interruption. Automatic rollback could overwrite a newer manual selection, so none is attempted.
 
-Promise session hooks supply no cancellation signal. Cancellation is best-effort through lifecycle tracking and generation checks; native activation or credential resolution already underway may finish after interruption. Cancellation cannot undo committed activation, and automatic rollback could overwrite a newer selection, so none is attempted.
+## Integration limitations
 
-If lifecycle tracking ends, cleanup and cancellation degrade until reload. Attribution and permissions expire after thirty minutes. State capacity is reserved before retry approval; active guards are not silently evicted to admit recovery. Capacity exhaustion refuses recovery. Resolved credentials are operation-local.
+- Register this plugin after plugins that change authentication or transport. Later changes can invalidate request attribution.
+- Public retry hooks lack request IDs, request kinds, and cancellation signals. Unsupported overlapping requests cannot be reliably correlated.
+- Guard failures stop the operation rather than providing a clean cancellation API.
+- Account activation is not a provider-reload barrier. Readiness is checked before retry approval and authentication is checked again before dispatch.
 
-Expired evidence cannot authorize rotation or prepared-authentication replacement. Expiry and plugin reload also remove memory-only continuation guards: protection does not survive those boundaries. Diagnostics use fixed messages without credentials, account identifiers, prompts, or provider bodies.
+If lifecycle tracking ends, cleanup and cancellation degrade until reload. Retained recovery state is bounded; capacity exhaustion refuses recovery. Attribution and permissions expire after thirty minutes.
+
+Expired evidence cannot authorize rotation or prepared-authentication replacement. Expiry and plugin reload also remove memory-only continuation guards: protection does not survive those boundaries. Diagnostics use fixed messages without credentials, account identifiers, prompts, or provider bodies. See [architecture](architecture.md) for implementation details.
 
 ## Validation
 

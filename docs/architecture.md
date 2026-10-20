@@ -31,6 +31,24 @@ Fresh primary/compaction preparation supersedes preceding bookkeeping in OpenCod
 
 Verified recovery arms a separate pending primary permission. The next matching primary preparation consumes it; an eligible ordinary retry explicitly re-arms it without changing native delay. Successful steps do not inherit permission. Intervening compaction keeps primary permission separate, with verified account transitions or conservative refusal.
 
+## Retry and lifecycle boundaries
+
+The recovery flow was audited against OpenCode **v2.0.32**. Retry hooks can override an incoming no-retry decision after verified recovery, but the hard native allowance is checked before hooks. The exceptional `LLMEvent.provider-error` path does not invoke retry hooks; lifecycle events alone cannot identify a missed hook.
+
+Primary retries rebuild requests and resolve authentication through OpenCode. Ordinary retry re-arming leaves native delay unchanged and excludes native authentication recovery. Title and transient generation requests are not tracked.
+
+Compaction can reuse an already prepared request. Standard adapters never replace its authentication. OpenAI's exception requires a trusted matching route, unchanged account-neutral settings, recognized stale authentication, and confirmed readiness. Intervening compaction does not consume pending primary permission, including when a hook supplies a result without transport. Transferring that permission after another account switch requires the same agent and full model/variant binding plus verified adapter, selection, and readiness.
+
+Step and compaction settlement do not clear recovery state: native partial-output continuation may publish step failure after retry approval. Execution-terminal events and session deletion clear session state and abort queued or waiting recovery. Timestamp and generation checks reject some stale updates, but public events do not provide exact execution/request-generation IDs. Promise session hooks provide no cancellation signal.
+
+Readiness polling uses a ten-second deadline per check, not an overall recovery timeout; awaited native operations can take longer. Activation completion is not a provider-reload barrier. Native initialization, authentication refresh, request replay, tools, and continuation remain outside the plugin.
+
+## Quota classification
+
+Reviewed exact exhaustion codes are recognized at the response root, `error`, or `response.error`, even when native normalization calls the failure a rate limit. Authentication, billing, eligibility, and capability exclusions across those envelopes take precedence. Message-only matching requires native quota classification and cannot override a rate limit.
+
+Reset timestamps are read from the matched exhaustion envelope. Missing, invalid, or past resets use a five-minute cooldown. Only the attributed exhausted credential receives that cooldown; a candidate skipped for readiness is not marked exhausted.
+
 ## Adding providers
 
 Prefer a reviewed declarative profile over a new adapter. Profiles specify supported packages and identities, direct credential representations, authentication headers, trusted destinations, readiness checks, and exhaustion/reset rules.
