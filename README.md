@@ -10,13 +10,15 @@ Rotates existing saved **OpenAI** accounts on confirmed usage/quota exhaustion u
 
 ## Build and install
 
-Install the tagged GitHub release globally (no npm publication required):
+Install from GitHub globally (no npm publication required):
 
 ```sh
-opencode plugin add github:shanthropic/opencode-account-rotate#v0.0.1
+opencode plugin add github:shanthropic/opencode-account-rotate#main
 ```
 
-Git installation builds the entrypoint through `prepare` and requires Node.js 22+ and npm. Remove any previous local-path entry from your global `plugins` array to avoid loading the plugin twice. Reload/restart the backend if the plugin is not picked up automatically.
+Compiled `dist/` files are included in Git because OpenCode installs packages with lifecycle scripts disabled. Run `npm run typecheck` and `npm run build` before committing source changes, and include the updated `dist/` files. Replace `main` with a full commit hash to pin an installation. The initial `v0.0.1` tag predates this packaging fix; use `main` or a corrected commit instead.
+
+Remove any previous local-path entry from your global `plugins` array to avoid loading the plugin twice. Reload/restart the backend if the plugin is not picked up automatically.
 
 ### Local development
 
