@@ -38,7 +38,8 @@ export class Dispatches {
     if (event.kind !== "primary" && event.kind !== "compaction") return;
     this.prune();
     const previous = this.slots.get(event.sessionID);
-    const follows = previous?.finished && sameModel(previous.model, event.model) && previous.agent === event.agent;
+    const follows = previous?.finished && previous.kind === event.kind && sameModel(previous.model, event.model) && previous.agent === event.agent;
+    if (previous && !previous.finished) previous.ambiguous = true;
     const slot: Dispatch = {
       sessionID: event.sessionID, agent: event.agent, model: { ...event.model }, kind: event.kind,
       created: Date.now(), generation: ++this.generation,
@@ -49,7 +50,7 @@ export class Dispatches {
     this.slots.set(event.sessionID, slot);
     if (previous?.authorization && !follows) this.stop();
     const state = await snapshot(this.ctx, slot.model);
-    if (!this.current(slot)) return;
+    if (!this.ensureCurrent(slot)) return;
     if (state) { slot.binding = state.binding; slot.adapter = resolveAdapter(state); }
     if (slot.authorization && (!state || !slot.adapter || !previous?.binding || !sameBinding(previous.binding, state.binding))) this.stop();
   }
@@ -68,7 +69,7 @@ export class Dispatches {
     const adapter = slot.adapter;
     const binding = slot.binding;
     const state = await snapshot(this.ctx, slot.model);
-    if (!this.current(slot)) return;
+    if (!this.ensureCurrent(slot)) return;
     if (!adapter || !binding || !state || !sameBinding(binding, state.binding) || resolveAdapter(state)?.id !== adapter.id) {
       slot.ambiguous = true;
       if (slot.authorization) this.stop();
@@ -77,7 +78,7 @@ export class Dispatches {
     const accounts = this.accounts(binding.integrationID);
     const active = await accounts.active().catch(() => undefined);
     let evidence = await adapter.inspect(active, url, headers, state);
-    if (!this.current(slot)) return;
+    if (!this.ensureCurrent(slot)) return;
     if (slot.authorization) {
       const expected = slot.authorization;
       if (slot.ambiguous || !evidence || !active || active.connection.id !== expected.credentialID || !adapter.ready(active, state) ||
@@ -105,7 +106,7 @@ export class Dispatches {
     if (!known?.id || known.until <= Date.now()) { slot.ambiguous = true; return; }
     if (!slot.finished && slot.fingerprint && slot.fingerprint !== evidence.fingerprint) slot.ambiguous = true;
     const signature = slot.signature ?? await adapter.signature(state).catch(() => "");
-    if (!this.current(slot)) return;
+    if (!this.ensureCurrent(slot)) return;
     slot.finished = false;
     slot.consumed = false;
     slot.credentialID = known.id;
@@ -143,6 +144,11 @@ export class Dispatches {
   }
   dispose(): void { this.slots.clear(); this.identities.clear(); }
   private stop(): never { throw new Error("opencode-account-rotate: continuation changed during recovery; submit again"); }
+  private ensureCurrent(slot: Dispatch): boolean {
+    const current = this.current(slot);
+    if (!current && slot.authorization) this.stop();
+    return current;
+  }
   private prune(): void {
     const now = Date.now();
     for (const [key, slot] of this.slots) if (now - slot.created > 30 * 60_000) this.slots.delete(key);

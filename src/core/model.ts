@@ -52,7 +52,7 @@ export async function snapshot(ctx: Context, ref: Model.Ref) {
   };
   return {
     binding, provider, model,
-    settings: merge(model.settings, variant?.settings),
+    settings: merge(model.settings, variantSettings(variant?.settings)),
     body: merge(model.body, variant?.body),
     headers: overlayHeaders(model.headers, variant?.headers),
     // Transport policy belongs to the provider, not variant/model settings.
@@ -60,6 +60,13 @@ export async function snapshot(ctx: Context, ref: Model.Ref) {
   };
 }
 export type Snapshot = NonNullable<Awaited<ReturnType<typeof snapshot>>>;
+
+function variantSettings(input: Record<string, unknown> | undefined) {
+  if (!input) return;
+  return Object.fromEntries(Object.entries(input).filter(([key]) =>
+    !["chunkTimeout", "headerTimeout", "timeout", "transport"].includes(key),
+  ));
+}
 
 export function sameModel(a: Model.Ref, b: Model.Ref): boolean {
   return a.providerID === b.providerID && a.id === b.id && a.variant === b.variant;
