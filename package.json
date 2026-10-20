@@ -1,0 +1,33 @@
+{
+  "name": "opencode-auto-provider",
+  "version": "0.0.0",
+  "description": "Native OpenAI account rotation on confirmed quota exhaustion for OpenCode V2",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "prepack": "npm run build",
+    "format": "prettier --write src package.json tsconfig.json README.md"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "peerDependencies": {
+    "@opencode/plugin": "^2.0.32"
+  },
+  "devDependencies": {
+    "@opencode/plugin": "^2.0.32",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3"
+  }
+}
