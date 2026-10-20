@@ -3,6 +3,7 @@ node_modules/
 jspm_packages/
 
 # Build output
+dist/
 build/
 out/
 lib/

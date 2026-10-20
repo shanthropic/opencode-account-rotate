@@ -48,7 +48,7 @@ node .github/scripts/verify-package.mjs
 git diff --check
 ```
 
-Commit rebuilt `dist/`: OpenCode installs packages with lifecycle scripts disabled. The build does not change user configuration. No tests or test files are included.
+`dist/` is generated locally and in CI, not committed. Both workflows build and verify the compiled npm payload; the publishing workflow includes it because OpenCode installs packages with lifecycle scripts disabled. Build first when loading a source checkout directly. The build does not change user configuration. No tests or test files are included.
 
 Static/package checks do not validate live recovery. Real-account Desktop acceptance across sign-in methods, concurrent/manual switches, throttling, tools, compaction, opaque state, WebSocket fallback, cancellation, and exhaustion **remains unvalidated**.
 

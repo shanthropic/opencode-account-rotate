@@ -50,10 +50,6 @@ jobs:
       - run: npm ci --ignore-scripts --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run build
-      - name: Verify committed build
-        run: |
-          git diff --exit-code -- dist
-          test -z "$(git ls-files --others --exclude-standard dist)"
       - run: node .github/scripts/verify-package.mjs
       - name: Publish using OIDC (no npm token)
         run: npm publish --access public --ignore-scripts

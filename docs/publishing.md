@@ -4,7 +4,7 @@ Releases use GitHub Actions trusted publishing, without an npm token. Publishing
 
 ## Workflows
 
-- `.github/workflows/ci.yml`: typecheck, build, verify tracked `dist/`, inspect the exact npm payload, and load the public entrypoint.
+- `.github/workflows/ci.yml`: typecheck, generate `dist/`, inspect the exact npm payload, and load the public entrypoint.
 - `.github/workflows/publish.yml`: new `npm-v*` tags; requires a stable matching package version on a commit reachable from `main`, rejects existing npm versions, and publishes with provenance through OIDC.
 
 Both use pinned actions, GitHub-hosted runners, Node 24, and npm 11.19.0, with dependency lifecycle scripts disabled. Only publishing receives `id-token: write`. Releases are serialized without cancellation.
@@ -14,7 +14,7 @@ The npm trusted publisher must match GitHub repository `shanthropic/opencode-acc
 ## Release
 
 1. Update `package.json` and `package-lock.json` to the intended stable version.
-2. Run typecheck, build, and `.github/scripts/verify-package.mjs`; commit rebuilt output and wait for CI.
+2. Run typecheck, build, and `.github/scripts/verify-package.mjs`; commit source changes and wait for CI. `dist/` is ignored, not committed; both workflows generate it from source before package verification. The publishing workflow includes it in npm even with lifecycle scripts disabled.
 3. Create a **new** `npm-v<version>` tag on the reviewed `main` commit and push that tag.
 4. Approve the environment deployment if required; verify registry version, tarball metadata, and provenance.
 

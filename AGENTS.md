@@ -10,4 +10,4 @@
 - Require conservative destination/authentication attribution. Custom-adapter refusal must never fall through to generic recovery.
 - Bound retained state, keep resolved credentials short-lived, and use fixed sanitized diagnostics.
 - Read `docs/recovery.md` before changing recovery behavior; document public-hook, concurrency, compaction, and validation limitations.
-- Validate nested package contents with `node .github/scripts/verify-package.mjs` and rebuild tracked `dist/` before completing source changes. Remove only obsolete generated artifacts.
+- Validate nested package contents with `node .github/scripts/verify-package.mjs` after building. `dist/` is ignored and generated in CI before package verification/publication; do not commit it. Remove only obsolete generated artifacts.
