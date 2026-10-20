@@ -27,8 +27,13 @@ export class Rotation {
   ) {}
 
   recover(event: SessionRetry, sent: Dispatch, until: number): Promise<void> {
-    if (this.pending.size >= 64)
+    event.decision = { retry: false };
+    if (this.pending.size >= 64 || !this.dispatches.reserve(sent)) {
+      diagnostic(
+        "Recovery state capacity unavailable or attribution changed; quota retries stopped.",
+      );
       return Promise.reject(new Error("Recovery capacity exceeded"));
+    }
     const operation = {
       sessionID: event.sessionID,
       created: sent.created,
@@ -219,7 +224,7 @@ export class Rotation {
     }
     if ((await this.accounts.activeID()) !== account.connection.id) return;
     this.check(signal, sent);
-    if (this.dispatches.authorize(sent, account.connection.id))
+    if (await this.dispatches.authorize(sent, account.connection.id))
       event.decision = { retry: true, delay: 0 };
   }
   private check(signal: AbortSignal, sent: Dispatch): void {

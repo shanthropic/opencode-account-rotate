@@ -51,7 +51,28 @@ export async function setup(ctx: Context) {
     const attempt = dispatches.inspect(event);
     const verdict = attempt?.adapter?.quota(event.error);
     const sent = dispatches.finish(event, verdict?.kind === "exhausted");
-    if (verdict?.kind !== "exhausted") return;
+    if (verdict?.kind !== "exhausted") {
+      if (
+        attempt?.authorization &&
+        event.decision.retry &&
+        event.error.type !== "provider.auth" &&
+        event.error.status !== 401 &&
+        event.error.status !== 403
+      ) {
+        try {
+          if (!(await dispatches.rearm(attempt))) {
+            event.decision = { retry: false };
+            diagnostic("Guarded continuation changed; native retry stopped.");
+          }
+        } catch {
+          event.decision = { retry: false };
+          diagnostic(
+            "Guarded continuation could not be verified; native retry stopped.",
+          );
+        }
+      }
+      return;
+    }
     if (!sent) {
       diagnostic(
         "Quota failure could not be attributed unambiguously; core retry policy left unchanged.",
