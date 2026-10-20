@@ -8,7 +8,7 @@ Rotates existing saved **OpenAI** accounts on confirmed usage/quota exhaustion u
 - No credential copies, custom OAuth, proxy, database, polling service, request-body edits, or custom tool replay.
 - Native selection is shared and persistent: switching affects other sessions and locations too.
 
-## Build and install
+## Install
 
 Once the first stable npm publication below is complete, install with:
 
@@ -19,40 +19,19 @@ Once the first stable npm publication below is complete, install with:
 }
 ```
 
-The npm package is not available until the release workflow succeeds. Do not load both the npm package and the local/Git entry.
+The npm package is not available until the release workflow succeeds. Remove any previous installation entry to avoid loading the plugin twice. Reload/restart OpenCode's backend after installation if the plugin is not picked up automatically. Desktop uses the backend's plugin configuration, not `cli.json`.
 
 Maintainers: see [OIDC publishing and first-release setup](https://github.com/shanthropic/opencode-account-rotate/blob/main/docs/publishing.md).
 
-Install from GitHub globally (no npm publication required):
+## Development
 
 ```sh
-opencode plugin add github:shanthropic/opencode-account-rotate#main
-```
-
-Compiled `dist/` files are included in Git because OpenCode installs packages with lifecycle scripts disabled. Run `npm run typecheck` and `npm run build` before committing source changes, and include the updated `dist/` files. Replace `main` with a full commit hash to pin an installation. The initial `v0.0.1` tag predates this packaging fix; use `main` or a corrected commit instead.
-
-Remove any previous local-path entry from your global `plugins` array to avoid loading the plugin twice. Reload/restart the backend if the plugin is not picked up automatically.
-
-### Local development
-
-```sh
-npm install
+npm ci --ignore-scripts
 npm run typecheck
 npm run build
 ```
 
-Add the built entrypoint to **global** `~/.config/opencode/opencode.jsonc` (merge with existing settings):
-
-```jsonc
-{
-  "$schema": "https://opencode.ai/config.json",
-  "plugins": [
-    "file:///C:/Users/USER/DEVELOPMENT_SPACE/Experiments/auto-provider/dist/index.js",
-  ],
-}
-```
-
-Use your actual absolute path if you move the repository. Keep `dist/` and the installed dependencies available. Reload/restart OpenCode's backend after installation or rebuilding an unwatched local dependency. Desktop uses the backend's plugin configuration, not `cli.json`.
+Compiled `dist/` files are included in Git and npm because OpenCode installs packages with lifecycle scripts disabled. Run type checking and the build before committing source changes, and include updated `dist/` files. No user configuration is edited by the build.
 
 Sign in to multiple accounts using OpenCode's existing authentication UI. This plugin has no separate login or configuration. Installation does not itself switch accounts. No user configuration is edited by the build.
 
