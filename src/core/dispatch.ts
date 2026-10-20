@@ -229,6 +229,16 @@ export class Dispatches {
         !this.current(slot))
     )
       this.stop();
+    // Signature/selection reads can yield while another session discovers a
+    // collision. Never dispatch using association authority captured before it.
+    const finalIdentity = this.identities.get(evidence.fingerprint);
+    if (
+      !finalIdentity?.id ||
+      finalIdentity.id !== known.id ||
+      finalIdentity.until <= Date.now()
+    )
+      slot.ambiguous = true;
+    if (slot.authorization && slot.ambiguous) this.stop();
     slot.finished = false;
     slot.consumed = false;
     slot.credentialID = known.id;
