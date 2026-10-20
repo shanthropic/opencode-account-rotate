@@ -2,7 +2,7 @@ name: Publish npm
 
 on:
   push:
-    tags: ["npm-v*"]
+    tags: ["v*"]
 
 permissions:
   contents: read
@@ -42,7 +42,7 @@ jobs:
           const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
           assert.equal(pkg.name, 'opencode-account-rotate');
           assert.match(pkg.version, /^\d+\.\d+\.\d+$/);
-          assert.equal(process.env.RELEASE_TAG, `npm-v${pkg.version}`);
+          assert.equal(process.env.RELEASE_TAG, `v${pkg.version}`);
           assert.equal(pkg.repository.url, 'git+https://github.com/shanthropic/opencode-account-rotate.git');
           const response = await fetch(`https://registry.npmjs.org/${pkg.name}/${pkg.version}`);
           assert.equal(response.status, 404, `Expected unpublished version; registry returned ${response.status}`);
