@@ -70,7 +70,10 @@ export class Rotation {
     const failed = sent.credentialID!;
     const adapter = sent.adapter!;
     this.prune();
-    if (!this.cooldowns.has(failed) && this.cooldowns.size >= 1024) return;
+    if (!this.cooldowns.has(failed) && this.cooldowns.size >= 1024) {
+      diagnostic("Recovery state capacity unavailable; quota retries stopped.");
+      return;
+    }
     this.cooldowns.set(
       failed,
       Math.max(this.cooldowns.get(failed) ?? 0, until),
@@ -78,7 +81,12 @@ export class Rotation {
     const key = JSON.stringify([sent.sessionID, sent.binding, sent.chainID]);
     let chain = this.chains.get(key);
     if (!chain) {
-      if (this.chains.size >= 512) return;
+      if (this.chains.size >= 512) {
+        diagnostic(
+          "Recovery state capacity unavailable; quota retries stopped.",
+        );
+        return;
+      }
       chain = {
         tried: new Set<string>(),
         created: sent.created,
@@ -86,7 +94,10 @@ export class Rotation {
       };
       this.chains.set(key, chain);
     }
-    if (!chain.tried.has(failed) && chain.tried.size >= 1024) return;
+    if (!chain.tried.has(failed) && chain.tried.size >= 1024) {
+      diagnostic("Recovery chain capacity unavailable; quota retries stopped.");
+      return;
+    }
     chain.tried.add(failed);
     const selected = await this.accounts.active();
     this.check(signal, sent);
@@ -142,7 +153,12 @@ export class Rotation {
           return;
         }
         this.check(signal, sent);
-        if (chain.tried.size >= 1024) return;
+        if (chain.tried.size >= 1024) {
+          diagnostic(
+            "Recovery chain capacity unavailable; quota retries stopped.",
+          );
+          return;
+        }
         await this.ctx.credential.activate({ credentialID: connection.id });
         this.check(signal, sent);
         expected = connection.id;
@@ -182,12 +198,16 @@ export class Rotation {
     const deadline = Date.now() + 10_000;
     do {
       this.check(signal, sent);
-      if ((await this.accounts.activeID()) !== account.connection.id)
+      if ((await this.accounts.activeID()) !== account.connection.id) {
+        diagnostic("Native selection changed; automatic recovery stopped.");
         return "changed";
+      }
       const state = await snapshot(this.ctx, sent.model);
       this.check(signal, sent);
-      if (state && sent.binding && !sameBinding(state.binding, sent.binding))
+      if (state && sent.binding && !sameBinding(state.binding, sent.binding)) {
+        diagnostic("Provider binding changed; automatic recovery stopped.");
         return "changed";
+      }
       if (
         state &&
         sent.adapter?.ready(account, state) &&
@@ -224,8 +244,16 @@ export class Rotation {
     }
     if ((await this.accounts.activeID()) !== account.connection.id) return;
     this.check(signal, sent);
-    if (await this.dispatches.authorize(sent, account.connection.id))
-      event.decision = { retry: true, delay: 0 };
+    if (!(await this.dispatches.authorize(sent, account.connection.id))) {
+      diagnostic(
+        "Guarded continuation could not be verified; quota retries stopped.",
+      );
+      return;
+    }
+    this.check(signal, sent);
+    if ((await this.accounts.activeID()) !== account.connection.id) return;
+    this.check(signal, sent);
+    event.decision = { retry: true, delay: 0 };
   }
   private check(signal: AbortSignal, sent: Dispatch): void {
     if (signal.aborted || sent.ambiguous || !this.dispatches.current(sent))

@@ -96,10 +96,6 @@ export async function setup(ctx: Context) {
 
   // Cleanup only terminal flows; retry scheduling is not a completion boundary.
   const terminal = new Set([
-    "session.step.ended",
-    "session.step.failed",
-    "session.compaction.ended",
-    "session.compaction.failed",
     "session.execution.succeeded",
     "session.execution.failed",
     "session.execution.interrupted",
@@ -122,11 +118,12 @@ export async function setup(ctx: Context) {
           entry.rotation.clear(event.data.sessionID, event.created);
       }
     } catch {
-      if (!controller.signal.aborted)
-        diagnostic(
-          "Lifecycle event stream ended; attribution uses bounded expiry until reload.",
-        );
+      // Public stream termination and failure have the same degraded guarantees.
     }
+    if (!controller.signal.aborted)
+      diagnostic(
+        "Lifecycle event stream ended; attribution uses bounded expiry until reload.",
+      );
   })();
   return async () => {
     controller.abort();
