@@ -11,7 +11,8 @@ export class StandardAdapter implements Adapter {
 
   matches(snapshot: Snapshot): boolean {
     return this.profile.providers.includes(snapshot.binding.providerID) &&
-      this.profile.packages.includes(snapshot.binding.package);
+      this.profile.packages.includes(snapshot.binding.package) &&
+      (snapshot.binding.canonical === undefined || this.profile.canonical.includes(snapshot.binding.canonical));
   }
   capability(account: Account): Capability {
     return this.profile.credential(account.value) && directToken(account.value)
@@ -35,7 +36,8 @@ export class StandardAdapter implements Adapter {
     };
   }
   ready(account: Account, snapshot: Snapshot): boolean {
-    return this.matches(snapshot) && this.capability(account) === "continue";
+    return this.matches(snapshot) && this.capability(account) === "continue" &&
+      this.profile.configuration(account, snapshot);
   }
   signature(snapshot: Snapshot): Promise<string> {
     const clean = (input: Record<string, string> | undefined) => {

@@ -38,6 +38,7 @@ export class Rotation {
     const failed = sent.credentialID!;
     const adapter = sent.adapter!;
     this.prune();
+    if (!this.cooldowns.has(failed) && this.cooldowns.size >= 1024) return;
     this.cooldowns.set(failed, Math.max(this.cooldowns.get(failed) ?? 0, until));
     const key = JSON.stringify([sent.sessionID, sent.binding, sent.chainID]);
     let chain = this.chains.get(key);
@@ -46,8 +47,8 @@ export class Rotation {
       chain = { tried: new Set<string>(), created: sent.created, sessionID: sent.sessionID };
       this.chains.set(key, chain);
     }
+    if (!chain.tried.has(failed) && chain.tried.size >= 1024) return;
     chain.tried.add(failed);
-    if (this.cooldowns.size > 1024 || chain.tried.size > 1024) return;
     const selected = await this.accounts.active();
     this.check(signal, sent);
     if (!selected) { diagnostic("Native selection is not a saved account; automatic recovery stopped."); return; }
@@ -73,6 +74,7 @@ export class Rotation {
           diagnostic("Native selection or provider binding changed; automatic activation stopped."); return;
         }
         this.check(signal, sent);
+        if (chain.tried.size >= 1024) return;
         await this.ctx.credential.activate({ credentialID: connection.id });
         this.check(signal, sent);
         expected = connection.id;
@@ -112,7 +114,7 @@ export class Rotation {
     this.check(signal, sent);
     if (sent.kind === "compaction") {
       const state = await snapshot(this.ctx, sent.model);
-      if (!state || !sent.adapter?.replacePrepared || !sent.signature || sent.signature !== await sent.adapter.signature(state)) {
+      if (!state || !sent.route || !sent.adapter?.replacePrepared || !sent.adapter.preparedCompatible?.(account, sent.route) || !sent.signature || sent.signature !== await sent.adapter.signature(state)) {
         diagnostic("Account switched, but prepared compaction needs a fresh run. Submit again to continue."); return;
       }
     }
@@ -121,7 +123,7 @@ export class Rotation {
     if (this.dispatches.authorize(sent, account.connection.id)) event.decision = { retry: true, delay: 0 };
   }
   private check(signal: AbortSignal, sent: Dispatch): void {
-    if (signal.aborted || !this.dispatches.current(sent)) throw new Error("Account recovery cancelled or superseded");
+    if (signal.aborted || sent.ambiguous || !this.dispatches.current(sent)) throw new Error("Account recovery cancelled or superseded");
   }
   private prune(): void {
     const now = Date.now();

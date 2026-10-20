@@ -10,10 +10,10 @@ import { ready } from "./readiness.js";
 export class OpenAIAdapter extends StandardAdapter {
   constructor() {
     super({
-      id: "openai", providers: ["openai"],
+      id: "openai", providers: ["openai"], canonical: ["openai"],
       packages: ["@opencode/ai/providers/openai"],
       header: "authorization", scheme: "Bearer ", identityHeaders: ["chatgpt-account-id"],
-      credential: (value) => !!route(value), destination, quota: quotaPolicy,
+      credential: (value) => !!route(value), destination, quota: quotaPolicy, configuration: ready,
     });
   }
   override capability(account: Account) {
@@ -26,7 +26,10 @@ export class OpenAIAdapter extends StandardAdapter {
     return result;
   }
   override ready(account: Account, snapshot: Snapshot): boolean {
-    return this.matches(snapshot) && ready(account, snapshot);
+    return super.ready(account, snapshot);
+  }
+  preparedCompatible(account: Account, target: string): boolean {
+    return route(account.value) === target;
   }
   replacePrepared(account: Account, target: string, headers: Headers): boolean {
     const token = directToken(account.value);

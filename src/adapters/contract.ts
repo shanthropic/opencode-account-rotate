@@ -16,6 +16,7 @@ export interface Adapter {
   inspect(account: Account | undefined, url: string, headers: Headers, snapshot: Snapshot): Promise<Authentication | undefined>;
   ready(account: Account, snapshot: Snapshot): boolean;
   signature(snapshot: Snapshot): Promise<string>;
+  preparedCompatible?(account: Account, route: string): boolean;
   /** Absent for standard profiles: prepared authentication must not be replaced. */
   replacePrepared?(account: Account, route: string, headers: Headers): boolean;
 }

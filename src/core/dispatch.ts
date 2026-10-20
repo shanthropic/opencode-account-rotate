@@ -48,6 +48,7 @@ export class Dispatches {
       authorization: follows ? previous.authorization : undefined,
     };
     this.slots.set(event.sessionID, slot);
+    this.prune();
     if (previous?.authorization && !follows) this.stop();
     const state = await snapshot(this.ctx, slot.model);
     if (!this.ensureCurrent(slot)) return;
@@ -101,9 +102,16 @@ export class Dispatches {
         id: known && known.until > Date.now() && known.id !== active.connection.id ? undefined : active.connection.id,
         until: Date.now() + 30 * 60_000,
       });
+      if (!this.identities.get(evidence.fingerprint)?.id)
+        for (const candidate of this.slots.values())
+          if (candidate.fingerprint === evidence.fingerprint) candidate.ambiguous = true;
     }
     const known = this.identities.get(evidence.fingerprint);
-    if (!known?.id || known.until <= Date.now()) { slot.ambiguous = true; return; }
+    if (!known?.id || known.until <= Date.now()) {
+      slot.ambiguous = true;
+      if (slot.authorization) this.stop();
+      return;
+    }
     if (!slot.finished && slot.fingerprint && slot.fingerprint !== evidence.fingerprint) slot.ambiguous = true;
     const signature = slot.signature ?? await adapter.signature(state).catch(() => "");
     if (!this.ensureCurrent(slot)) return;
@@ -128,7 +136,8 @@ export class Dispatches {
     const slot = this.inspect(event);
     if (!slot || slot.finished) return;
     slot.finished = true;
-    if (!exhausted || slot.ambiguous || slot.consumed || !slot.credentialID || !slot.binding || !slot.adapter) return;
+    const identity = slot.fingerprint ? this.identities.get(slot.fingerprint) : undefined;
+    if (!exhausted || slot.ambiguous || slot.consumed || !slot.credentialID || identity?.id !== slot.credentialID || identity.until <= Date.now() || !slot.binding || !slot.adapter) return;
     slot.consumed = true;
     return slot;
   }
