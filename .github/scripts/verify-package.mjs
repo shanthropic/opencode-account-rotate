@@ -9,7 +9,28 @@ const [pkg] = JSON.parse(
 );
 assert.equal(pkg.name, "opencode-account-rotate");
 const expected = new Set(["package.json", "README.md", "LICENSE"]);
-for (const module of ["accounts", "dispatch", "index", "policy", "rotation"]) {
+for (const module of [
+  "index",
+  "runtime",
+  "core/types",
+  "core/model",
+  "core/accounts",
+  "core/coordinator",
+  "core/diagnostics",
+  "core/dispatch",
+  "core/rotation",
+  "adapters/contract",
+  "adapters/registry",
+  "adapters/standard/adapter",
+  "adapters/standard/profiles",
+  "adapters/standard/authentication",
+  "adapters/standard/quota",
+  "adapters/openai/adapter",
+  "adapters/openai/authentication",
+  "adapters/openai/endpoints",
+  "adapters/openai/quota",
+  "adapters/openai/readiness",
+]) {
   expected.add(`dist/${module}.js`);
   expected.add(`dist/${module}.d.ts`);
 }

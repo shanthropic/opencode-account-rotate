@@ -10,19 +10,38 @@ import { ready } from "./readiness.js";
 export class OpenAIAdapter extends StandardAdapter {
   constructor() {
     super({
-      id: "openai", providers: ["openai"], canonical: ["openai"],
+      id: "openai",
+      providers: ["openai"],
+      canonical: ["openai"],
       packages: ["@opencode/ai/providers/openai"],
-      header: "authorization", scheme: "Bearer ", identityHeaders: ["chatgpt-account-id"],
-      credential: (value) => !!route(value), destination, quota: quotaPolicy, configuration: ready,
+      header: "authorization",
+      scheme: "Bearer ",
+      identityHeaders: ["chatgpt-account-id"],
+      credential: (value) => !!route(value),
+      destination,
+      quota: quotaPolicy,
+      configuration: ready,
     });
   }
   override capability(account: Account) {
-    return route(account.value) && directToken(account.value) ? "continue" as const : "activate-only" as const;
+    return route(account.value) && directToken(account.value)
+      ? ("continue" as const)
+      : ("activate-only" as const);
   }
-  override async inspect(account: Account | undefined, url: string, headers: Headers, snapshot: Snapshot) {
+  override async inspect(
+    account: Account | undefined,
+    url: string,
+    headers: Headers,
+    snapshot: Snapshot,
+  ) {
     const result = await super.inspect(account, url, headers, snapshot);
-    if (result) result.matches = result.matches && !!account && route(account.value) === result.route &&
-      (headers.get("chatgpt-account-id") ?? undefined) === (result.route === "codex" ? accountHeader(account.value) : undefined);
+    if (result)
+      result.matches =
+        result.matches &&
+        !!account &&
+        route(account.value) === result.route &&
+        (headers.get("chatgpt-account-id") ?? undefined) ===
+          (result.route === "codex" ? accountHeader(account.value) : undefined);
     return result;
   }
   override ready(account: Account, snapshot: Snapshot): boolean {

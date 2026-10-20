@@ -9,6 +9,7 @@ const standard = profiles.map((profile) => new StandardAdapter(profile));
 
 export function resolveAdapter(snapshot: Snapshot): Adapter | undefined {
   // Claim the namespace first. A specialized refusal NEVER falls through.
-  if (snapshot.binding.providerID === "openai") return openai.matches(snapshot) ? openai : undefined;
+  if (snapshot.binding.providerID === "openai")
+    return openai.matches(snapshot) ? openai : undefined;
   return standard.find((adapter) => adapter.matches(snapshot));
 }

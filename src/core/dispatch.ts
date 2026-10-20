@@ -1,5 +1,9 @@
 import type { Model } from "@opencode/plugin";
-import type { SessionModelRequest, SessionRequestKind, SessionRetry } from "@opencode/plugin/promise/session";
+import type {
+  SessionModelRequest,
+  SessionRequestKind,
+  SessionRetry,
+} from "@opencode/plugin/promise/session";
 import type { Adapter } from "../adapters/contract.js";
 import { resolveAdapter } from "../adapters/registry.js";
 import { Accounts } from "./accounts.js";
@@ -32,19 +36,32 @@ export class Dispatches {
   private slots = new Map<string, Dispatch>();
   private identities = new Map<string, { id?: string; until: number }>();
   private generation = 0;
-  constructor(private ctx: Context, private accounts: (integrationID: string) => Accounts) {}
+  constructor(
+    private ctx: Context,
+    private accounts: (integrationID: string) => Accounts,
+  ) {}
 
   async begin(event: SessionModelRequest): Promise<void> {
     if (event.kind !== "primary" && event.kind !== "compaction") return;
     this.prune();
     const previous = this.slots.get(event.sessionID);
-    const follows = previous?.finished && previous.kind === event.kind && sameModel(previous.model, event.model) && previous.agent === event.agent;
+    const follows =
+      previous?.finished &&
+      previous.kind === event.kind &&
+      sameModel(previous.model, event.model) &&
+      previous.agent === event.agent;
     if (previous && !previous.finished) previous.ambiguous = true;
     const slot: Dispatch = {
-      sessionID: event.sessionID, agent: event.agent, model: { ...event.model }, kind: event.kind,
-      created: Date.now(), generation: ++this.generation,
+      sessionID: event.sessionID,
+      agent: event.agent,
+      model: { ...event.model },
+      kind: event.kind,
+      created: Date.now(),
+      generation: ++this.generation,
       chainID: follows ? previous.chainID : this.generation,
-      ambiguous: !!previous && !previous.finished, finished: false, consumed: false,
+      ambiguous: !!previous && !previous.finished,
+      finished: false,
+      consumed: false,
       authorization: follows ? previous.authorization : undefined,
     };
     this.slots.set(event.sessionID, slot);
@@ -52,26 +69,58 @@ export class Dispatches {
     if (previous?.authorization && !follows) this.stop();
     const state = await snapshot(this.ctx, slot.model);
     if (!this.ensureCurrent(slot)) return;
-    if (state) { slot.binding = state.binding; slot.adapter = resolveAdapter(state); }
-    if (slot.authorization && (!state || !slot.adapter || !previous?.binding || !sameBinding(previous.binding, state.binding))) this.stop();
+    if (state) {
+      slot.binding = state.binding;
+      slot.adapter = resolveAdapter(state);
+    }
+    if (
+      slot.authorization &&
+      (!state ||
+        !slot.adapter ||
+        !previous?.binding ||
+        !sameBinding(previous.binding, state.binding))
+    )
+      this.stop();
   }
 
   current(slot: Dispatch): boolean {
-    return this.slots.get(slot.sessionID) === slot && Date.now() - slot.created <= 30 * 60_000;
+    return (
+      this.slots.get(slot.sessionID) === slot &&
+      Date.now() - slot.created <= 30 * 60_000
+    );
   }
 
-  async observe(event: Pick<SessionModelRequest, "sessionID" | "agent" | "model" | "kind">, url: string, headers: Headers): Promise<void> {
+  async observe(
+    event: Pick<SessionModelRequest, "sessionID" | "agent" | "model" | "kind">,
+    url: string,
+    headers: Headers,
+  ): Promise<void> {
     if (event.kind !== "primary" && event.kind !== "compaction") return;
     const slot = this.slots.get(event.sessionID);
-    if (!slot || !this.current(slot) || slot.kind !== event.kind || !sameModel(slot.model, event.model) || slot.agent !== event.agent) {
-      if (slot) { slot.ambiguous = true; if (slot.authorization) this.stop(); }
+    if (
+      !slot ||
+      !this.current(slot) ||
+      slot.kind !== event.kind ||
+      !sameModel(slot.model, event.model) ||
+      slot.agent !== event.agent
+    ) {
+      if (slot) {
+        slot.ambiguous = true;
+        if (slot.authorization) this.stop();
+      }
       return;
     }
     const adapter = slot.adapter;
     const binding = slot.binding;
     const state = await snapshot(this.ctx, slot.model);
     if (!this.ensureCurrent(slot)) return;
-    if (!adapter || !binding || !state || !sameBinding(binding, state.binding) || resolveAdapter(state)?.id !== adapter.id) {
+    if (
+      !adapter ||
+      !binding ||
+      !state ||
+      !sameBinding(binding, state.binding) ||
+      resolveAdapter(state)?.id !== adapter.id
+    ) {
       slot.ambiguous = true;
       if (slot.authorization) this.stop();
       return;
@@ -82,29 +131,55 @@ export class Dispatches {
     if (!this.ensureCurrent(slot)) return;
     if (slot.authorization) {
       const expected = slot.authorization;
-      if (slot.ambiguous || !evidence || !active || active.connection.id !== expected.credentialID || !adapter.ready(active, state) ||
-        (await accounts.activeID()) !== expected.credentialID || !this.current(slot)) this.stop();
+      if (
+        slot.ambiguous ||
+        !evidence ||
+        !active ||
+        active.connection.id !== expected.credentialID ||
+        !adapter.ready(active, state) ||
+        (await accounts.activeID()) !== expected.credentialID ||
+        !this.current(slot)
+      )
+        this.stop();
       if (expected.prepared) {
-        if (!adapter.replacePrepared || evidence.route !== slot.route ||
-          !slot.signature || await adapter.signature(state) !== slot.signature ||
-          (evidence.fingerprint !== slot.preparedFingerprint && evidence.fingerprint !== slot.fingerprint)) this.stop();
-        if (!this.current(slot) || (await accounts.activeID()) !== expected.credentialID) this.stop();
-        if (!adapter.replacePrepared(active, evidence.route, headers)) this.stop();
+        if (
+          !adapter.replacePrepared ||
+          evidence.route !== slot.route ||
+          !slot.signature ||
+          (await adapter.signature(state)) !== slot.signature ||
+          (evidence.fingerprint !== slot.preparedFingerprint &&
+            evidence.fingerprint !== slot.fingerprint)
+        )
+          this.stop();
+        if (
+          !this.current(slot) ||
+          (await accounts.activeID()) !== expected.credentialID
+        )
+          this.stop();
+        if (!adapter.replacePrepared(active, evidence.route, headers))
+          this.stop();
         evidence = await adapter.inspect(active, url, headers, state);
       }
       if (!evidence?.matches || !this.current(slot)) this.stop();
     }
-    if (!evidence) { slot.ambiguous = true; return; }
+    if (!evidence) {
+      slot.ambiguous = true;
+      return;
+    }
     if (evidence.matches && active) {
       const known = this.identities.get(evidence.fingerprint);
       // A collision is sticky until expiry; never overwrite association authority.
       this.identities.set(evidence.fingerprint, {
-        id: known && known.until > Date.now() && known.id !== active.connection.id ? undefined : active.connection.id,
+        id:
+          known && known.until > Date.now() && known.id !== active.connection.id
+            ? undefined
+            : active.connection.id,
         until: Date.now() + 30 * 60_000,
       });
       if (!this.identities.get(evidence.fingerprint)?.id)
         for (const candidate of this.slots.values())
-          if (candidate.fingerprint === evidence.fingerprint) candidate.ambiguous = true;
+          if (candidate.fingerprint === evidence.fingerprint)
+            candidate.ambiguous = true;
     }
     const known = this.identities.get(evidence.fingerprint);
     if (!known?.id || known.until <= Date.now()) {
@@ -112,8 +187,14 @@ export class Dispatches {
       if (slot.authorization) this.stop();
       return;
     }
-    if (!slot.finished && slot.fingerprint && slot.fingerprint !== evidence.fingerprint) slot.ambiguous = true;
-    const signature = slot.signature ?? await adapter.signature(state).catch(() => "");
+    if (
+      !slot.finished &&
+      slot.fingerprint &&
+      slot.fingerprint !== evidence.fingerprint
+    )
+      slot.ambiguous = true;
+    const signature =
+      slot.signature ?? (await adapter.signature(state).catch(() => ""));
     if (!this.ensureCurrent(slot)) return;
     slot.finished = false;
     slot.consumed = false;
@@ -127,7 +208,13 @@ export class Dispatches {
 
   inspect(event: SessionRetry): Dispatch | undefined {
     const slot = this.slots.get(event.sessionID);
-    if (!slot || !this.current(slot) || slot.agent !== event.agent || !sameModel(slot.model, event.model)) return;
+    if (
+      !slot ||
+      !this.current(slot) ||
+      slot.agent !== event.agent ||
+      !sameModel(slot.model, event.model)
+    )
+      return;
     return slot;
   }
 
@@ -136,8 +223,20 @@ export class Dispatches {
     const slot = this.inspect(event);
     if (!slot || slot.finished) return;
     slot.finished = true;
-    const identity = slot.fingerprint ? this.identities.get(slot.fingerprint) : undefined;
-    if (!exhausted || slot.ambiguous || slot.consumed || !slot.credentialID || identity?.id !== slot.credentialID || identity.until <= Date.now() || !slot.binding || !slot.adapter) return;
+    const identity = slot.fingerprint
+      ? this.identities.get(slot.fingerprint)
+      : undefined;
+    if (
+      !exhausted ||
+      slot.ambiguous ||
+      slot.consumed ||
+      !slot.credentialID ||
+      identity?.id !== slot.credentialID ||
+      identity.until <= Date.now() ||
+      !slot.binding ||
+      !slot.adapter
+    )
+      return;
     slot.consumed = true;
     return slot;
   }
@@ -151,8 +250,15 @@ export class Dispatches {
     const slot = this.slots.get(sessionID);
     if (slot && created >= slot.created) this.slots.delete(sessionID);
   }
-  dispose(): void { this.slots.clear(); this.identities.clear(); }
-  private stop(): never { throw new Error("opencode-account-rotate: continuation changed during recovery; submit again"); }
+  dispose(): void {
+    this.slots.clear();
+    this.identities.clear();
+  }
+  private stop(): never {
+    throw new Error(
+      "opencode-account-rotate: continuation changed during recovery; submit again",
+    );
+  }
   private ensureCurrent(slot: Dispatch): boolean {
     const current = this.current(slot);
     if (!current && slot.authorization) this.stop();
@@ -160,9 +266,13 @@ export class Dispatches {
   }
   private prune(): void {
     const now = Date.now();
-    for (const [key, slot] of this.slots) if (now - slot.created > 30 * 60_000) this.slots.delete(key);
-    for (const [key, identity] of this.identities) if (identity.until <= now) this.identities.delete(key);
-    while (this.slots.size > 512) this.slots.delete(this.slots.keys().next().value!);
-    while (this.identities.size > 256) this.identities.delete(this.identities.keys().next().value!);
+    for (const [key, slot] of this.slots)
+      if (now - slot.created > 30 * 60_000) this.slots.delete(key);
+    for (const [key, identity] of this.identities)
+      if (identity.until <= now) this.identities.delete(key);
+    while (this.slots.size > 512)
+      this.slots.delete(this.slots.keys().next().value!);
+    while (this.identities.size > 256)
+      this.identities.delete(this.identities.keys().next().value!);
   }
 }

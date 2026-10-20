@@ -13,7 +13,12 @@ export interface Adapter {
   matches(snapshot: Snapshot): boolean;
   capability(account: Account): Capability;
   quota(error: SessionRetry["error"]): QuotaVerdict;
-  inspect(account: Account | undefined, url: string, headers: Headers, snapshot: Snapshot): Promise<Authentication | undefined>;
+  inspect(
+    account: Account | undefined,
+    url: string,
+    headers: Headers,
+    snapshot: Snapshot,
+  ): Promise<Authentication | undefined>;
   ready(account: Account, snapshot: Snapshot): boolean;
   signature(snapshot: Snapshot): Promise<string>;
   preparedCompatible?(account: Account, route: string): boolean;
