@@ -5,7 +5,7 @@ import { Rotation } from "./rotation.js";
 import { diagnostic, quota } from "./policy.js";
 
 export default Plugin.define({
-  id: "auto-provider",
+  id: "opencode-account-rotate",
   async setup(ctx) {
     if (
       typeof ctx.credential?.activate !== "function" ||
@@ -14,7 +14,7 @@ export default Plugin.define({
       typeof ctx.session?.hook !== "function"
     ) {
       throw new Error(
-        "auto-provider requires OpenCode V2 native activation and transport hooks (2.0.32+)",
+        "opencode-account-rotate requires OpenCode V2 native activation and transport hooks (2.0.32+)",
       );
     }
     const controller = new AbortController();

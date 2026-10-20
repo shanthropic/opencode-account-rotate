@@ -95,13 +95,13 @@ export class Dispatches {
         (await this.accounts.signature(slot.model)) !== slot.signature
       ) {
         throw new Error(
-          "auto-provider: prepared compaction changed during account recovery; run again",
+          "opencode-account-rotate: prepared compaction changed during account recovery; run again",
         );
       }
       const token = bearer(active.value);
       if (!token)
         throw new Error(
-          "auto-provider: activated credential cannot authenticate this compaction",
+          "opencode-account-rotate: activated credential cannot authenticate this compaction",
         );
       headers.set("authorization", `Bearer ${token}`);
       const accountID =

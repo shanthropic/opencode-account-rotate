@@ -1,4 +1,4 @@
-# OpenCode Auto Provider
+# OpenCode Account Rotate
 
 Rotates existing saved **OpenAI** accounts on confirmed usage/quota exhaustion using OpenCode's native account activation API. Targets stock OpenCode V2 **2.0.32+**, including Desktop.
 

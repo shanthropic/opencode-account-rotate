@@ -51,5 +51,5 @@ export function quota(
 
 export function diagnostic(message: string): void {
   // Callers supply fixed messages only. Never interpolate provider errors or IDs.
-  console.info(`[auto-provider] ${message}`);
+  console.info(`[opencode-account-rotate] ${message}`);
 }

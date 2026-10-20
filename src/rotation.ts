@@ -197,16 +197,16 @@ export class Rotation {
   }
 
   private check(signal: AbortSignal): void {
-    if (signal.aborted) throw new Error("auto-provider recovery cancelled");
+    if (signal.aborted) throw new Error("opencode-account-rotate recovery cancelled");
   }
 }
 
 function pause(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (signal.aborted) return reject(new Error("auto-provider unloaded"));
+    if (signal.aborted) return reject(new Error("opencode-account-rotate unloaded"));
     const abort = () => {
       clearTimeout(timer);
-      reject(new Error("auto-provider unloaded"));
+      reject(new Error("opencode-account-rotate unloaded"));
     };
     const timer = setTimeout(() => {
       signal.removeEventListener("abort", abort);
