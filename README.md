@@ -10,6 +10,19 @@ Rotates existing saved **OpenAI** accounts on confirmed usage/quota exhaustion u
 
 ## Build and install
 
+Once the first stable npm publication below is complete, install with:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugins": ["opencode-account-rotate@0.0.1"],
+}
+```
+
+The npm package is not available until the release workflow succeeds. Do not load both the npm package and the local/Git entry.
+
+Maintainers: see [OIDC publishing and first-release setup](https://github.com/shanthropic/opencode-account-rotate/blob/main/docs/publishing.md).
+
 Install from GitHub globally (no npm publication required):
 
 ```sh

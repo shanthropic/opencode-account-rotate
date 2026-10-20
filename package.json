@@ -2,6 +2,18 @@
   "name": "opencode-account-rotate",
   "version": "0.0.1",
   "description": "Native OpenAI account rotation on confirmed quota exhaustion for OpenCode V2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shanthropic/opencode-account-rotate.git"
+  },
+  "homepage": "https://github.com/shanthropic/opencode-account-rotate#readme",
+  "bugs": {
+    "url": "https://github.com/shanthropic/opencode-account-rotate/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "type": "module",
   "exports": {
     ".": {
