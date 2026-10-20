@@ -1,6 +1,6 @@
 {
   "name": "opencode-account-rotate",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Native OpenAI account rotation on confirmed quota exhaustion for OpenCode V2",
   "type": "module",
   "exports": {
@@ -16,6 +16,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
+    "prepare": "npm run build",
     "prepack": "npm run build",
     "format": "prettier --write src package.json tsconfig.json README.md"
   },
