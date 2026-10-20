@@ -1,6 +1,7 @@
 {
   "name": "opencode-account-rotate",
   "version": "0.0.1",
+  "license": "MIT",
   "description": "Native OpenAI account rotation on confirmed quota exhaustion for OpenCode V2",
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
   },
   "files": [
     "dist",
+    "LICENSE",
     "README.md"
   ],
   "scripts": {

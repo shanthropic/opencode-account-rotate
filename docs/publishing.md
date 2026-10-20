@@ -11,7 +11,7 @@ Both use GitHub-hosted runners, Node 24, pinned npm 11.19.0 (OIDC requires npm >
 
 ## One-time owner setup
 
-1. Choose a license before public publication. This repository does not currently declare one; the workflow does not choose a license for you.
+1. Review the package metadata and MIT license before public publication.
 2. Confirm you control an npm account with 2FA and that `opencode-account-rotate` is available. A registry 404 is not a guarantee that npm will permit the name.
 3. Merge these workflows and package metadata into `main`.
 4. Create the GitHub environment **`npm`**. Configure required reviewer approval if available and restrict deployment tags to `npm-v*`. Protect `main`, release tags, and workflow changes using repository rules. Do not create an `NPM_TOKEN` secret.

@@ -2,6 +2,8 @@
 
 Rotates existing saved **OpenAI** accounts on confirmed usage/quota exhaustion using OpenCode's native account activation API. Targets stock OpenCode V2 **2.0.32+**, including Desktop.
 
+Licensed under the [MIT License](LICENSE).
+
 - One rotation list across ChatGPT token-sharing, Codex browser, Codex headless, and saved API-key credentials. No sign-in-method grouping; no API key required.
 - Ordinary throttling retains OpenCode's retry/backoff policy.
 - HTTP, WebSocket, and WebSocket-to-HTTP fallback attribution.

@@ -8,7 +8,7 @@ const [pkg] = JSON.parse(
   }),
 );
 assert.equal(pkg.name, "opencode-account-rotate");
-const expected = new Set(["package.json", "README.md"]);
+const expected = new Set(["package.json", "README.md", "LICENSE"]);
 for (const module of ["accounts", "dispatch", "index", "policy", "rotation"]) {
   expected.add(`dist/${module}.js`);
   expected.add(`dist/${module}.d.ts`);
