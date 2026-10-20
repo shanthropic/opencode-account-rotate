@@ -2,6 +2,8 @@
 
 Releases use GitHub Actions trusted publishing, without an npm token. Publishing is separate from development and requires explicit authorization.
 
+Version **0.1.0** uses release tag `npm-v0.1.0`. Package metadata, the lockfile, and the README installation example must agree on the release version.
+
 ## Workflows
 
 - `.github/workflows/ci.yml`: typecheck, generate `dist/`, inspect the exact npm payload, and load the public entrypoint.

@@ -6,7 +6,7 @@ Automatically switches between saved **OpenAI** accounts when quota is exhausted
 - Keeps your selected provider, model, and variant unchanged.
 - Leaves ordinary rate limits, credential refresh, tools, history, and retries under OpenCode's control.
 
-**Release status:** npm `0.0.1` is the published release. The adapter architecture and recovery changes on `main` have not yet been published; installing `0.0.1` does not install those changes.
+**Version 0.1.0** includes the shared adapter architecture and native quota-recovery fixes: guarded retry permissions, recovery-state lifetime corrections, and reviewed exhaustion-envelope recognition.
 
 ## Install
 
@@ -15,7 +15,7 @@ Add to `opencode.json(c)`:
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": ["opencode-account-rotate@0.0.1"],
+  "plugins": ["opencode-account-rotate@0.1.0"],
 }
 ```
 
@@ -32,7 +32,7 @@ Sign in to multiple accounts through OpenCode's authentication UI. No separate p
 
 There is one account list across ChatGPT token-sharing, Codex browser/headless, and saved API keys—not separate sign-in-method pools. HTTP, WebSocket, and fallback requests participate in attribution; auxiliary title/generate requests do not.
 
-**OpenAI is the only enabled provider.** Custom destinations, external credentials, and unreviewed packages/SDK transports are unmanaged. The shared adapter/profile architecture on `main` does not automatically enable other providers.
+**OpenAI is the only enabled provider.** Custom destinations, external credentials, and unreviewed packages/SDK transports are unmanaged. The shared adapter/profile architecture does not automatically enable other providers.
 
 **Activation is global and persistent**, affecting other sessions and locations. Local queues cannot make it atomic against manual switches or other processes. There is no automatic rollback.
 

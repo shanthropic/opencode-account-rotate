@@ -27,7 +27,9 @@ Use the effective model package, canonical identity, variant, and credential rep
 
 Recovery chains retain session, provider/model/variant, and integration identity. Local generations reject stale asynchronous updates. Cooldowns apply only to the exhausted integration/credential, not an inferred organization-wide quota.
 
-Dispatch attribution rejects overlapping preparations and conflicting credential associations. WebSocket and HTTP fallback share one logical dispatch. Ordinary retries finish attempt bookkeeping without consuming quota-recovery authority.
+Fresh primary/compaction preparation supersedes preceding bookkeeping in OpenCode's serialized execution flow; an unfinished slot alone does not establish overlap. Conflicting transport evidence and credential associations cannot authorize recovery. WebSocket and HTTP fallback share one preparation guard.
+
+Verified recovery arms a separate pending primary permission. The next matching primary preparation consumes it; an eligible ordinary retry explicitly re-arms it without changing native delay. Successful steps do not inherit permission. Intervening compaction keeps primary permission separate, with verified account transitions or conservative refusal.
 
 ## Adding providers
 
