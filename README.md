@@ -36,7 +36,7 @@ Providers are enabled one at a time, after review. Nothing is enabled by matchin
 - [x] **OpenAI** — ChatGPT token-sharing, Codex browser/headless sign-ins, and saved API keys. Uses one saved-account list across all of them.
 - [ ] **GitHub Copilot** — next candidate. Requires review of token exchange/expiry, Enterprise destinations, and quota behavior.
 - [ ] **Other subscription sign-ins** — under consideration, subject to the same review.
-- [ ] **API-key-only providers, OpenAI-compatible endpoints, external credentials, local models** — not planned. There is no multi-account quota to rotate.
+- [ ] **API-key-only providers, OpenAI-compatible endpoints, external credentials, local models**.
 
 Enabling a provider requires reviewed package entrypoints and model identity, a recognized credential form, trusted destinations, readiness checks, and exhaustion/reset rules. See [adding providers](https://github.com/shanthropic/opencode-account-rotate/blob/main/docs/architecture.md#adding-providers). Order is intent, not a schedule. Accounts must also match the selected model and active configuration; a recognized sign-in method is not a guarantee of live recovery.
 
