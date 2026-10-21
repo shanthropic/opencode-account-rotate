@@ -1,6 +1,6 @@
 # OpenCode Account Rotate
 
-Automatically switches between saved **OpenAI** accounts when quota is exhausted. Requires **OpenCode 2.0.32+**. [MIT licensed](LICENSE).
+Automatically switches between saved **OpenAI** accounts when quota is exhausted. Requires **OpenCode 2.0.32+**. Support for other providers is planned; OpenAI is the only one enabled today. [MIT licensed](LICENSE).
 
 - Uses your existing OpenCode sign-ins—no separate login, credential copies, or API key required.
 - Keeps your selected provider, model, and variant unchanged.
@@ -8,7 +8,7 @@ Automatically switches between saved **OpenAI** accounts when quota is exhausted
 
 ## Install
 
-Requires **OpenCode V2 2.0.32+** and multiple saved OpenAI accounts.
+Requires **OpenCode V2 2.0.32+** and multiple saved accounts for a supported provider.
 
 Add the plugin to your global `~/.config/opencode/opencode.json(c)` (on Windows, `%USERPROFILE%\.config\opencode\opencode.json(c)`). To install only for a project, use that project's `opencode.json(c)` instead. Merge this entry with your existing settings:
 
@@ -29,11 +29,18 @@ Watched configuration changes reload automatically; missing packages install in 
 
 The example pins version `0.1.0`. To update, replace that version in your existing entry; `opencode plugin update` skips exact version pins. To remove the plugin, delete its entry. Removing it does not restore a previously selected account.
 
-## Supported accounts
+## Provider support
 
-Uses one saved-account list across ChatGPT token-sharing, Codex browser/headless sign-ins, and saved API keys. Accounts must be compatible with the selected model and OpenCode's active configuration to continue automatically.
+Providers are enabled one at a time, after review. Nothing is enabled by matching tokens, protocols, or package names.
 
-**OpenAI is the only enabled provider.** Custom endpoints, external credentials, and alternative SDK transports are not managed. Recognition of a sign-in method is not a guarantee of live recovery support.
+- [x] **OpenAI** — ChatGPT token-sharing, Codex browser/headless sign-ins, and saved API keys. Uses one saved-account list across all of them.
+- [ ] **GitHub Copilot** — next candidate. Requires review of token exchange and expiry, Enterprise destinations, and quota behavior.
+- [ ] **Other subscription sign-ins** — under consideration, subject to the same review.
+- [ ] **API-key-only providers, OpenAI-compatible endpoints, external credentials, local models** — not planned. There is no multi-account quota to rotate.
+
+Enabling a provider requires reviewed package entrypoints and model identity, a recognized credential form, trusted destinations, readiness checks, and exhaustion/reset rules. See [adding providers](https://github.com/shanthropic/opencode-account-rotate/blob/main/docs/architecture.md#adding-providers).
+
+Roadmap order is intent, not a schedule. Accounts must also be compatible with the selected model and OpenCode's active configuration to continue automatically. Recognition of a sign-in method is not a guarantee of live recovery support.
 
 ## How it works
 
