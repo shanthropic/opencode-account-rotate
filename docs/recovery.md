@@ -8,7 +8,7 @@ Authentication, billing, eligibility, and model restrictions do not trigger rota
 
 The exhausted credential cools down until a recognized reset, or for five minutes. Recovery uses one native saved-account order across sign-in methods and never revisits excluded candidates within the same chain. Unavailable candidates are not marked quota-exhausted.
 
-OpenCode resolves credentials and activates candidates from the saved-account list. The plugin checks readiness for the selected provider/model/variant and makes another pass for newly available accounts before giving up. An unfamiliar OpenAI sign-in method may be activated, but automatic continuation requires recognized authentication.
+OpenCode resolves credentials and activates candidates from the saved-account list. The plugin checks readiness for the selected provider/model/variant and makes another pass for newly available accounts before giving up. An unfamiliar sign-in method may be activated, but automatic continuation requires recognized authentication.
 
 ## Why did execution stop after switching?
 
