@@ -51,6 +51,8 @@ Reset timestamps are read from the matched exhaustion envelope. Missing, invalid
 
 ## Adding providers
 
+Enabled today: OpenAI only. Roadmap candidates live in the README; a listed provider is not supported until its profile or adapter is reviewed and merged.
+
 Prefer a reviewed declarative profile over a new adapter. Profiles specify supported packages and identities, direct credential representations, authentication headers, trusted destinations, readiness checks, and exhaustion/reset rules.
 
 Use a custom adapter only for genuinely different behavior. Review native and SDK transports separately; matching protocols or tokens do not establish safe recovery. External credentials, signing, token exchange, unknown transformations, and arbitrary destinations are not standard cases.

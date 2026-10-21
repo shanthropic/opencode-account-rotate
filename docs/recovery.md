@@ -2,7 +2,7 @@
 
 ## When does rotation happen?
 
-Recovery requires explicit quota exhaustion and an unambiguous match to the sending saved credential. A generic quota category, HTTP 429, payment failure, expired plan, or model restriction is not enough. Ordinary rate limits stay under OpenCode's retry policy.
+Recovery requires explicit quota exhaustion and an unambiguous match to the sending saved credential. Rotation applies only to enabled providers (currently OpenAI); other providers keep OpenCode's normal handling. A generic quota category, HTTP 429, payment failure, expired plan, or model restriction is not enough. Ordinary rate limits stay under OpenCode's retry policy.
 
 Authentication, billing, eligibility, and model restrictions do not trigger rotation. OpenCode remains responsible for sign-in and credential refresh.
 
