@@ -15,7 +15,7 @@ Add the plugin to your global `~/.config/opencode/opencode.json(c)` (on Windows,
 ```jsonc
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugins": ["opencode-account-rotate@0.1.0"],
+  "plugins": ["opencode-account-rotate@0.1.1"],
 }
 ```
 
@@ -27,7 +27,7 @@ Watched configuration changes reload automatically, and missing packages install
 
 ### Update or remove
 
-The example pins version `0.1.0`. To update, replace that version in your existing entry; `opencode plugin update` skips exact version pins. To remove the plugin, delete its entry. Removing it does not restore a previously selected account.
+The example pins version `0.1.1`. To update, replace that version in your existing entry; `opencode plugin update` skips exact version pins. To remove the plugin, delete its entry. Removing it does not restore a previously selected account.
 
 ## Provider support
 
