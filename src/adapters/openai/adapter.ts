@@ -13,7 +13,11 @@ export class OpenAIAdapter extends StandardAdapter {
       id: "openai",
       providers: ["openai"],
       canonical: ["openai"],
-      packages: ["@opencode/ai/providers/openai"],
+      packages: [
+        "@opencode/ai/providers/openai",
+        "@opencode/ai/providers/openai/responses",
+        "@opencode/ai/providers/openai/chat",
+      ],
       header: "authorization",
       scheme: "Bearer ",
       identityHeaders: ["chatgpt-account-id"],
