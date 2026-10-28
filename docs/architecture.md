@@ -19,6 +19,8 @@ OpenCode hooks
 
 OpenAI reuses the standard adapter's shared primitives. The standard profile registry remains empty; other providers are not enabled automatically.
 
+The reviewed OpenAI packages are `@opencode/ai/providers/openai`, `@opencode/ai/providers/openai/responses`, and `@opencode/ai/providers/openai/chat`. OpenCode **v2.2.0** uses the latter two in its bundled catalog; they re-export the existing OpenAI Responses and Chat implementations. Other subpaths and SDK packages remain unsupported.
+
 ## Account and request identity
 
 Use `provider.integrationID ?? provider.id` for native account selection. Providers sharing an integration share one account inventory and activation queue, regardless of sign-in method.

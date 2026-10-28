@@ -56,7 +56,7 @@ node .github/scripts/verify-package.mjs
 git diff --check
 ```
 
-Also check formatting. Package verification checks the exact compiled payload and loads the public entrypoint. No tests or test files are included. Static checks and successful installation do not establish live recovery correctness.
+Also check formatting. Package verification checks the exact compiled payload, loads the public entrypoint, and verifies adapter selection for reviewed OpenAI packages and refusal of unsupported packages or identities. OpenCode v2.2.0's native OpenAI entrypoints were source-reviewed; this is not live recovery acceptance. No tests or test files are included. Static checks and successful installation do not establish live recovery correctness.
 
 Live-account acceptance **has not been performed**. It must cover:
 
